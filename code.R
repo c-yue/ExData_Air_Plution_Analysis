@@ -18,8 +18,12 @@ nei$year <- as.factor(nei$year)
 year <- nei$year
 pm25 <- nei$Emissions
 
+year_list <- as.matrix(unique(year))[,1]
+median_pm <- as.matrix(tapply(pm25, year, median))[,1]
+plot(year_list, median_pm, type='p')
+
 png(filename="plot1.png",width=480, height=480)
-boxplot(log10(pm25) ~ year, ylim = c(-10, 5))
+plot(year_list, median_pm, type='p')
 dev.off()
 
 #Decreased
@@ -31,77 +35,94 @@ bc <- nei[nei$fips == "24510", ]
 year_bc <- bc$year
 pm25_bc <- bc$Emissions
 
+year_list_bc <- as.matrix(unique(year_bc))[,1]
+sum_pm_bc <- as.matrix(tapply(pm25_bc, year_bc, sum))[,1]
+plot(year_list_bc, sum_pm_bc, type='p')
+
 png(filename="plot2.png",width=480, height=480)
-boxplot(log10(pm25_bc) ~ year_bc)
+plot(year_list_bc, sum_pm_bc, type='p')
 dev.off()
 
-#Decreased
+#Decreased in a fructuration
 
 
 
-#Of the four types of sources indicated by the \color{red}{\verb|type|}type (point, nonpoint, onroad, nonroad) variable
+#Of the four types of sources indicated by the type (point, nonpoint, onroad, nonroad) variable
 #which of these four sources have seen decreases in emissions from 1999–2008 for Baltimore City?
 bc <- nei[nei$fips == "24510", ]
 
-g <- ggplot(bc, aes(x=year, y=log10(Emissions)))
-g + geom_boxplot(aes(fill=year)) +
+bc_prs <- bc %>%
+        group_by(year, type) %>%
+        summarise(sum_pm = sum(Emissions))
+
+g <- ggplot(bc_prs, aes(x=year, y=sum_pm))
+g + geom_point(aes(fill=year)) +
     facet_wrap(~ type)
 
 png(filename="plot3.png",width=480, height=480)
-g + geom_boxplot(aes(fill=year)) +
-    facet_wrap(~ type)
+g + geom_point(aes(fill=year)) +
+        facet_wrap(~ type)
 dev.off()
 
-#Decreased
+#Decreased Except the type point
 
 
 
 #how have emissions from coal combustion-related sources changed from 1999–2008?
-com <- left_join(nei, scc, by = 'SCC')
-com_coal <- com[com$SCC.Level.One %in% 
-                        c('External Combustion Boilers',
-                         'Internal Combustion Engines',
-                         'Stationary Source Fuel Combustion'),]
+coal_scc <- scc[grepl("Coal",scc$Short.Name),]
+coal_nei <- nei[nei$SCC %in% coal_scc$SCC,]
 
-g <- ggplot(com_coal, aes(x=year, y=log10(Emissions)))
-g + geom_boxplot(aes(fill=year))
+coal_prs <- coal_nei %>%
+        group_by(year) %>%
+        summarise(sum_pm = sum(Emissions))
+
+g <- ggplot(coal_prs, aes(x=year, y=sum_pm))
+g + geom_point(aes(fill=year))
 
 png(filename="plot4.png",width=480, height=480)
-g + geom_boxplot(aes(fill=year))
+g + geom_point(aes(fill=year))
 dev.off()
 
-#Stable
+#Decreased
 
 
 
 #How have emissions from motor vehicle sources changed from 1999–2008 in Baltimore City?
-com <- left_join(nei, scc, by = 'SCC')
-com_bc_motor <- com[com$SCC.Level.One == 'Mobile Sources' & com$fips == "24510",]
+bc_v <- nei[nei$type == 'ON-ROAD' & nei$fips == "24510",]
 
-g <- ggplot(com_bc_motor, aes(x=year, y=log10(Emissions)))
-g + geom_boxplot(aes(fill=year))
+bc_v_prs <- bc_v %>%
+        group_by(year) %>%
+        summarise(sum_pm = sum(Emissions))
+
+g <- ggplot(bc_v_prs, aes(x=year, y=sum_pm))
+g + geom_point(aes(fill=year))
 
 png(filename="plot5.png",width=480, height=480)
-g + geom_boxplot(aes(fill=year))
+g + geom_point(aes(fill=year))
 dev.off()
 
-#Decreased from 1999 to 2002, and then stay stable
+#Decreased
 
 
 
 #Compare emissions from motor vehicle sources in Baltimore City 
 #with emissions from motor vehicle sources in Los Angeles County, California (fips == "06037"). 
 #Which city has seen greater changes over time in motor vehicle emissions?
-com <- left_join(nei, scc, by = 'SCC')
-bc_los_motor <- com[com$SCC.Level.One == 'Mobile Sources' & com$fips %in% c("24510","06037"),]
 bc_los_motor$location <- if_else(bc_los_motor$fips == "24510", "Baltimore City", "Los Angeles County")
 
-g <- ggplot(bc_los_motor, aes(x=year, y=log10(Emissions)))
-g + geom_boxplot(aes(fill=year)) +
+bc_los <- nei[nei$type == 'ON-ROAD' & nei$fips %in% c("24510","06037"),]
+bc_los$location <- if_else(bc_los$fips == "24510", "Baltimore City", "Los Angeles County")
+
+bc_los_prs <- bc_los %>%
+        group_by(year, location) %>%
+        summarise(sum_pm = sum(Emissions))
+
+g <- ggplot(bc_los_prs, aes(x=year, y=sum_pm))
+g + geom_point(aes(fill=year)) +
     facet_wrap(~ location)
 
 png(filename="plot6.png",width=480, height=480)
-g + geom_boxplot(aes(fill=year)) +
+g + geom_point(aes(fill=year)) +
         facet_wrap(~ location)
 dev.off()
 
